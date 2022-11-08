@@ -20,7 +20,7 @@
     "express": "^4.17.1",
     "express-session": "^1.17.3",
     "jsonwebtoken": "^8.5.1",
-    "neo4j-driver": "^5.1.0",
+    "neo4j-driver": "^5.2.0",
     "passport": "^0.6.0",
     "passport-anonymous": "^1.0.1",
     "passport-jwt": "^4.0.0",

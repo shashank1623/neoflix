@@ -1,15 +1,16 @@
-import { Router } from 'express'
-import passport from 'passport'
-import NotFoundError from '../errors/not-found.error.js'
-import { getDriver } from '../neo4j.js'
-import MovieService from '../services/movie.service.js'
-import RatingService from '../services/rating.service.js'
-import { getPagination, MOVIE_SORT, RATING_SORT } from '../utils.js'
+import { Router } from "express";
+import passport from "passport";
+import NotFoundError from "../errors/not-found.error.js";
+import { getDriver } from "../neo4j.js";
+import MovieService from "../services/movie.service.js";
+import RatingService from "../services/rating.service.js";
+import { getPagination, MOVIE_SORT, RATING_SORT } from "../utils.js";
+import { int } from "neo4j-driver";
 
-const router = new Router()
+const router = new Router();
 
 // Optional Authentication
-router.use(passport.authenticate(['jwt', 'anonymous'], { session: false }))
+router.use(passport.authenticate(["jwt", "anonymous"], { session: false }));
 
 /**
  * @GET /movies
@@ -18,27 +19,20 @@ router.use(passport.authenticate(['jwt', 'anonymous'], { session: false }))
  * `sort` query parameter,
  */
 // tag::list[]
-router.get('/', async (req, res, next) => {
+router.get("/", async (req, res, next) => {
   try {
-    const { sort, order, limit, skip }
-      = getPagination(req, MOVIE_SORT) // <1>
+    const { sort, order, limit, skip } = getPagination(req, MOVIE_SORT); // <1>
 
-    const movieService = new MovieService(
-      getDriver()
-    ) // <2>
+    const movieService = new MovieService(getDriver()); // <2>
 
-    const movies = await movieService.all(
-      sort, order, limit, skip
-    ) // <3>
+    const movies = await movieService.all(sort, order, limit, skip); // <3>
 
-    res.json(movies)
+    res.json(movies);
+  } catch (e) {
+    next(e);
   }
-  catch (e) {
-    next(e)
-  }
-})
+});
 // end::list[]
-
 
 /**
  * @GET /movies/:id
@@ -46,23 +40,24 @@ router.get('/', async (req, res, next) => {
  * This route should find a movie by its tmdbId and return its properties.
  */
 // tag::get[]
-router.get('/:id', async (req, res, next) => {
+router.get("/:id", async (req, res, next) => {
   try {
-    const driver = getDriver()
+    const driver = getDriver();
 
-    const movieService = new MovieService(driver)
-    const movie = await movieService.findById(req.params.id)
+    const movieService = new MovieService(driver);
+    const movie = await movieService.findById(req.params.id);
 
     if (!movie) {
-      return next(new NotFoundError(`Movie with id ${req.params.id} not found`))
+      return next(
+        new NotFoundError(`Movie with id ${req.params.id} not found`)
+      );
     }
 
-    res.json(movie)
+    res.json(movie);
+  } catch (e) {
+    next(e);
   }
-  catch (e) {
-    next(e)
-  }
-})
+});
 // end::get[]
 
 /**
@@ -73,20 +68,25 @@ router.get('/:id', async (req, res, next) => {
  * the rating itself or when the review was created.
  */
 // tag::ratings[]
-router.get('/:id/ratings', async (req, res, next) => {
+router.get("/:id/ratings", async (req, res, next) => {
   try {
-    const driver = getDriver()
-    const { sort, order, limit, skip } = getPagination(req, RATING_SORT)
+    const driver = getDriver();
+    const { sort, order, limit, skip } = getPagination(req, RATING_SORT);
 
-    const ratingService = new RatingService(driver)
-    const reviews = await ratingService.forMovie(req.params.id, sort, order, limit, skip)
+    const ratingService = new RatingService(driver);
+    const reviews = await ratingService.forMovie(
+      req.params.id,
+      sort,
+      order,
+      limit,
+      skip
+    );
 
-    res.json(reviews)
+    res.json(reviews);
+  } catch (e) {
+    next(e);
   }
-  catch (e) {
-    next(e)
-  }
-})
+});
 // ennd::ratings[]
 
 /**
@@ -96,24 +96,29 @@ router.get('/:id/ratings', async (req, res, next) => {
  * similarity score in descending order.
  */
 // tag::similar[]
-router.get('/:id/similar', async (req, res, next) => {
+router.get("/:id/similar", async (req, res, next) => {
   try {
-    const driver = getDriver()
-    const { limit, skip } = getPagination(req)
+    const driver = getDriver();
+    const { limit, skip } = getPagination(req);
 
-    const movieService = new MovieService(driver)
-    const movie = await movieService.getSimilarMovies(req.params.id, limit, skip)
+    const movieService = new MovieService(driver);
+    const movie = await movieService.getSimilarMovies(
+      req.params.id,
+      limit,
+      skip
+    );
 
     if (!movie) {
-      return next(new NotFoundError(`Movie with id ${req.params.id} not found`))
+      return next(
+        new NotFoundError(`Movie with id ${req.params.id} not found`)
+      );
     }
 
-    res.json(movie)
+    res.json(movie);
+  } catch (e) {
+    next(e);
   }
-  catch (e) {
-    next(e)
-  }
-})
+});
 // end::similar[]
 
-export default router
+export default router;

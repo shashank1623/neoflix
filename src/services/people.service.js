@@ -1,14 +1,14 @@
-import NotFoundError from '../errors/not-found.error.js'
-import { pacino, people } from '../../test/fixtures/people.js'
-import { toNativeTypes } from '../utils.js'
-
+import NotFoundError from "../errors/not-found.error.js";
+import { pacino, people } from "../../test/fixtures/people.js";
+import { toNativeTypes } from "../utils.js";
+import { int } from "neo4j-driver";
 // TODO: Import the `int` function from neo4j-driver
 
 export default class PeopleService {
   /**
    * @type {neo4j.Driver}
    */
-  driver
+  driver;
 
   /**
    * The constructor expects an instance of the Neo4j Driver, which will be
@@ -17,7 +17,7 @@ export default class PeopleService {
    * @param {neo4j.Driver} driver
    */
   constructor(driver) {
-    this.driver = driver
+    this.driver = driver;
   }
 
   /**
@@ -37,10 +37,29 @@ export default class PeopleService {
    * @returns {Promise<Record<string, any>[]>}
    */
   // tag::all[]
-  async all(q, sort = 'name', order = 'ASC', limit = 6, skip = 0) {
-    // TODO: Get a list of people from the database
+  async all(q, sort = "name", order = "ASC", limit = 6, skip = 0) {
+    // Open a new database session
+    const session = this.driver.session();
 
-    return people.slice(skip, skip + limit)
+    // Get a list of people from the database
+    const res = await session.executeRead((tx) =>
+      tx.run(
+        `
+        MATCH (p:Person)
+        ${q !== undefined ? "WHERE p.name CONTAINS $q" : ""}
+        RETURN p { .* } AS person
+        ORDER BY p.${sort} ${order}
+        SKIP $skip
+        LIMIT $limit
+      `,
+        { q, skip: int(skip), limit: int(limit) }
+      )
+    );
+
+    // Close the session
+    await session.close();
+
+    return res.records.map((row) => toNativeTypes(row.get("person")));
   }
   // end::all[]
 
@@ -55,9 +74,29 @@ export default class PeopleService {
    */
   // tag::findById[]
   async findById(id) {
-    // TODO: Find a user by their ID
+    // Open a new database session
+    const session = this.driver.session();
 
-    return pacino
+    // Get a list of people from the database
+    const res = await session.executeRead((tx) =>
+      tx.run(
+        `
+        MATCH (p:Person {tmdbId: $id})
+        RETURN p {
+          .*,
+          actedCount: size((p)-[:ACTED_IN]->()),
+          directedCount: size((p)-[:DIRECTED]->())
+        } AS person
+      `,
+        { id }
+      )
+    );
+
+    // Close the session
+    await session.close();
+
+    const [row] = res.records;
+    return toNativeTypes(row.get("person"));
   }
   // end::findById[]
 
@@ -75,8 +114,7 @@ export default class PeopleService {
   async getSimilarPeople(id, limit = 6, skip = 0) {
     // TODO: Get a list of similar people to the person by their id
 
-    return people.slice(skip, skip + limit)
+    return people.slice(skip, skip + limit);
   }
   // end::getSimilarPeople[]
-
 }
